@@ -55,6 +55,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "projects.signals.ThreadLocalMiddleware",
     "simple_history.middleware.HistoryRequestMiddleware",
 ]
 
@@ -81,7 +82,6 @@ WSGI_APPLICATION = "simplehistorydemo.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-AUTH_USER_MODEL = "users.CustomUser"
 
 DATABASES = {
     "default": {
@@ -95,7 +95,7 @@ DATABASES = {
         "PORT": config("DATABASE_PORT"),
     }
 }
-
+AUTH_USER_MODEL = "users.CustomUser"
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ("rest_framework_simplejwt.authentication.JWTAuthentication",),
 }
@@ -105,6 +105,10 @@ from datetime import timedelta
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(days=60),
 }
+
+SIMPLE_HISTORY_HISTORY_ID_USE_UUID = False
+
+SIMPLE_HISTORY_GET_USER = lambda request: getattr(request, "user", None)
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators

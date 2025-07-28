@@ -25,6 +25,11 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     Tracks changes using django-simple-history.
     """
 
+    ROLE_CHOICES = (
+        ("admin", "Admin"),
+        ("manager", "Manager"),
+        ("staff", "Staff"),
+    )
     username = models.CharField(
         max_length=150,
         unique=True,
@@ -37,7 +42,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     first_name = models.CharField(max_length=100, verbose_name=_("first name"))
 
     last_name = models.CharField(max_length=100, verbose_name=_("last name"))
-
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="staff")
     is_active = models.BooleanField(
         default=True,
         help_text=_("Designates whether this user should be treated as active."),
