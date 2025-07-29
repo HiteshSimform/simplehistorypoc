@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views import (
+    ProjectHistoryDiffView,
     ProjectHistoryListView,
     ProjectHistoryView,
     ProjectListCreateView,
@@ -25,5 +26,10 @@ urlpatterns = [
         "projects/<int:pk>/rollback/<int:history_id>/",
         RollbackProjectView.as_view(),
         name="project-rollback",
+    ),
+    path(
+        "projects/<int:pk>/diff/",
+        ProjectHistoryDiffView.as_view(),
+        name="project-history-diff",
     ),
 ]

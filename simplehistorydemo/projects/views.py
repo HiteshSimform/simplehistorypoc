@@ -115,30 +115,6 @@ class ProjectListCreateView(generics.ListCreateAPIView):
         return queryset
 
 
-# class ProjectRollbackView(APIView):
-#     """
-#     POST: Roll back a project to a specific historical version (admin only).
-#     """
-
-#     permission_classes = [permissions.IsAdminUser]
-
-#     def post(self, request, pk, history_id):
-#         project = get_object_or_404(Project, pk=pk, is_deleted=False)
-#         history_obj = get_object_or_404(project.history.all(), history_id=history_id)
-
-#         fields_to_restore = ["name", "description", "status", "manager"]
-
-#         for field in fields_to_restore:
-#             setattr(project, field, getattr(history_obj, field))
-
-#         update_change_reason(project, f"Rolled back to version {history_id}")
-#         request._history_user = request.user
-#         project.save()
-
-#         serializer = ProjectSerializer(project)
-#         return Response(serializer.data, status=status.HTTP_200_OK)
-
-
 class RollbackProjectView(APIView):
     """
     Rollback a project to a specific historical version.
@@ -160,14 +136,18 @@ class RollbackProjectView(APIView):
             restored_instance.save()
 
             return Response(
-                {"detail": f"Project {pk} rolled back to history ID {history_id}."}, status=status.HTTP_200_OK
+                {"detail": f"Project {pk} rolled back to history ID {history_id}."},
+                status=status.HTTP_200_OK,
             )
 
         except Project.DoesNotExist:
             return Response({"detail": "Project not found."}, status=status.HTTP_404_NOT_FOUND)
 
         except project.history.model.DoesNotExist:
-            return Response({"detail": "Historical version not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Historical version not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -182,3 +162,35 @@ class ProjectHistoryListView(generics.ListAPIView):
 
     def get_queryset(self):
         return Project.history.filter(id=self.kwargs["pk"]).order_by("-history_date")
+
+
+class ProjectHistoryDiffView(APIView):
+    """
+    Compare the two most recent historical versions of a Project instance
+    and return the changed fields.
+    """
+
+    def get(self, request, pk, format=None):
+        project = get_object_or_404(Project, pk=pk)
+        history = project.history.all().order_by("-history_date")
+
+        if history.count() < 2:
+            return Response(
+                {"detail": "Not enough historical records to compare."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        latest = history[0]
+        previous = history[1]
+
+        try:
+            delta = latest.diff_against(previous)
+        except Exception as e:
+            return Response(
+                {"detail": f"Error during diff: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        changes = [{"field": change.field, "from": change.old, "to": change.new} for change in delta.changes]
+
+        return Response(changes, status=status.HTTP_200_OK)
